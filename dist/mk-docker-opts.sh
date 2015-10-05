@@ -11,6 +11,7 @@ OPTIONS:
 	-c	Output combined Docker options into DOCKER_OPTS var
 	-k	Set the combined options key to this value (default DOCKER_OPTS=)
 	-m	Do not output --ip-masq (useful for older Docker version)
+	-b  Use a custom bridge in place of docker0
 " >/dev/stderr 
 
 	exit 1
@@ -43,6 +44,8 @@ while getopts "f:d:icmk:" opt; do
 		k)
 			combined_opts_key=$OPTARG
 			;;
+		b)
+			bridge=false
 		\?)
 			usage
 			;;
@@ -58,8 +61,14 @@ if [ -f "$flannel_env" ]; then
 	source $flannel_env
 fi
 
-if [ -n "$FLANNEL_SUBNET" ]; then
-	DOCKER_OPT_BIP="--bip=$FLANNEL_SUBNET"
+if [ $bridge = false ]; then
+	if [ -n "$FLANNEL_SUBNET" ]; then
+		DOCKER_OPT_BIP="--bip=$FLANNEL_SUBNET"
+	fi
+else
+	DOCKER_OPT_BRIDGE="--b=$bridge"
+	# Set bridge ip, as bip and bridge are mutually exclusive options
+	ip addr add $FLANNEL_SUBNET dev $bridge
 fi
 
 if [ -n "$FLANNEL_MTU" ]; then
